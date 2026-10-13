@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apps Script 測試</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 16px; background: #fff; color: #222; }
+    .pass { color: #1b7f3b; }
+    .fail { color: #c62828; white-space: pre-wrap; }
+    #summary { font-weight: 700; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <h1>Apps Script 後端測試</h1>
+  <p>在瀏覽器中以模擬的 Google 服務執行 <code>apps-script/*.gs</code>。</p>
+  <p id="summary">執行中…</p>
+  <ol id="results"></ol>
+  <script type="module" src="gas.test.js"></script>
+</body>
+</html>
