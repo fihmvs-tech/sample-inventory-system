@@ -100,6 +100,23 @@ function apiSetItemStatus_(req) {
   return publicItem_(item);
 }
 
+// 從展品主檔移除；Loans 與 Logs 的歷史紀錄保留，並記一筆「刪除」日誌。
+function apiDeleteItem_(req) {
+  const itemId = normalizeItemId_(req.itemId);
+  const items = openTable_(SHEET.ITEMS);
+  const item = findItem_(items, itemId);
+  if (item.status === ITEM_STATUS.ON_LOAN) throw new Error(itemId + ' 目前借出中，請先歸還再刪除');
+
+  items.sheet.deleteRow(item._row);
+  writeLogs_([{
+    action: ACTION.DELETE,
+    item_id: itemId,
+    operator: adminOperator_(req),
+    detail: [item.name, item.category, item.location].filter(Boolean).join('・'),
+  }]);
+  return { item_id: itemId, name: item.name };
+}
+
 function apiGetHistory_(req) {
   const itemId = normalizeItemId_(req.itemId);
   const item = findItem_(openTable_(SHEET.ITEMS), itemId);

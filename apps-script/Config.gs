@@ -55,6 +55,7 @@ const ACTION = {
   STATUS: '狀態變更',
   TRANSFER: '移轉',
   REMINDER: '催還通知',
+  DELETE: '刪除',
 };
 
 const DEFAULT_SETTINGS = [

@@ -32,6 +32,7 @@ function routes_() {
     listItems: { handler: apiListItems_, admin: true },
     saveItem: { handler: apiSaveItem_, admin: true, write: true },
     setItemStatus: { handler: apiSetItemStatus_, admin: true, write: true },
+    deleteItem: { handler: apiDeleteItem_, admin: true, write: true },
     transfer: { handler: apiTransfer_, admin: true, write: true },
     getHistory: { handler: apiGetHistory_, admin: true },
     listOverdue: { handler: apiListOverdue_, admin: true },

@@ -240,8 +240,10 @@ export async function item(itemId) {
         <a class="btn" href="#/item-edit/${encodeURIComponent(it.item_id)}">編輯資料</a>
         ${actions}
         ${it.status === '借出' ? '<button class="btn" type="button" id="show-transfer">移轉／延長借用</button>' : ''}
+        ${it.status !== '借出' ? '<button class="btn btn-danger" type="button" id="show-delete">刪除展品</button>' : ''}
       </div>
     </section>
+    <div id="delete-box"></div>
     <section class="card item-label">
       <div class="label-preview">
         <div class="qr" id="item-qr" role="img" aria-label="${esc(it.item_id)} 的 QR Code"></div>
@@ -293,6 +295,38 @@ export async function item(itemId) {
   });
   const showTransfer = document.getElementById('show-transfer');
   if (showTransfer) showTransfer.addEventListener('click', () => transferForm(it));
+  const showDelete = document.getElementById('show-delete');
+  if (showDelete) showDelete.addEventListener('click', () => deletePanel(it));
+}
+
+// 刪除前在頁面上再確認一次，說清楚會發生什麼事。
+function deletePanel(it) {
+  const box = document.getElementById('delete-box');
+  box.innerHTML = `
+    <section class="card danger-zone" role="alertdialog" aria-labelledby="delete-title">
+      <h2 id="delete-title">刪除 ${esc(it.item_id)} ${esc(it.name)}？</h2>
+      <ul class="consequences">
+        <li>展品會從清單中移除，貼在展品上的 QR 標籤將無法再使用。</li>
+        <li>過去的借用紀錄與異動日誌會保留在試算表中。</li>
+        <li>刪除後無法復原。如果只是不再使用、想保留資料，請改用「報廢」。</li>
+      </ul>
+      <div class="btn-row">
+        <button class="btn" type="button" data-cancel>取消</button>
+        <button class="btn btn-danger-solid" type="button" data-confirm>確定刪除</button>
+      </div>
+    </section>`;
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  box.querySelector('[data-cancel]').addEventListener('click', () => { box.innerHTML = ''; });
+  const confirmButton = box.querySelector('[data-confirm]');
+  confirmButton.addEventListener('click', () => withBusy(confirmButton, '刪除中…', async () => {
+    try {
+      await adminApi('deleteItem', { itemId: it.item_id });
+      toast(`已刪除 ${it.item_id} ${it.name}`);
+      go('#/admin');
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }));
 }
 
 // 例：日本展覽結束後剩下的展品直接帶去美國 → 移轉給同一人（或其他人），更新事由與預計歸還日。

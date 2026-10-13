@@ -210,6 +210,30 @@ test('信件內容會跳脫 HTML', () => {
   eq(state.mails[0].htmlBody.includes('&lt;b&gt;Bob&lt;/b&gt;'), true, '姓名已跳脫');
 });
 
+test('刪除展品：從主檔移除、保留歷史並記錄日誌；借出中不能刪', () => {
+  seedItems(['A01', 'A02', 'A03']);
+  borrow(['A02']);
+  ok('checkin', { itemIds: ['A02'] });
+  borrow(['A03']);
+
+  fails('deleteItem', { itemId: 'A01' }, false, /管理者金鑰/);
+  const res = ok('deleteItem', { itemId: 'a02', operatorName: '小王' }, true);
+  eq(res, { item_id: 'A02', name: '展品 A02' }, '回傳');
+  eq(sheetRows('Items').map((r) => r.item_id), ['A01', 'A03'], '主檔只剩 A01、A03');
+  fails('getItem', { itemId: 'A02' }, false, /查無展品編號 A02/);
+  eq(sheetRows('Loans').filter((r) => r.item_id === 'A02').length, 1, '借用紀錄保留');
+  const del = sheetRows('Logs').filter((r) => r.item_id === 'A02').map((r) => r.action);
+  eq(del, ['新增', '借出', '完全歸還', '刪除'], '日誌');
+  eq(sheetRows('Logs').slice(-1)[0].operator, '管理者(小王)', '刪除者');
+
+  fails('deleteItem', { itemId: 'A03' }, true, /借出中/);
+  fails('deleteItem', { itemId: 'Z99' }, true, /查無展品編號/);
+  eq(ok('getItem', { itemId: 'A03' }).status, '借出', '刪除 A02 後其他列不受影響');
+
+  ok('saveItem', { item: { item_id: 'A02', name: '重新建立' }, isNew: true }, true);
+  eq(ok('getItem', { itemId: 'A02' }).name, '重新建立', '刪除後可用同編號重新建立');
+});
+
 test('未知動作與錯誤的管理者金鑰會回傳錯誤', () => {
   fails('dropTables', {}, false, /未知的動作/);
   eq(call('verifyAdmin', { adminKey: 'wrong' }).ok, false, '錯誤金鑰');

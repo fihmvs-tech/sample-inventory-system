@@ -141,6 +141,11 @@ h3 { font-size: 16px; }
 .btn:disabled { opacity: 0.55; cursor: default; }
 .btn-primary { background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
 .btn-danger { color: var(--danger); }
+.btn-danger-solid { background: var(--danger); border-color: var(--danger); color: #fff; }
+.danger-zone { border-color: var(--danger); }
+.danger-zone h2 { color: var(--danger); }
+.consequences { margin: 0 0 14px; padding-left: 20px; font-size: 14px; color: var(--muted); }
+.consequences li { margin-bottom: 4px; }
 .btn-block { width: 100%; }
 .btn-lg { min-height: 56px; font-size: 18px; }
 .btn-sm { min-height: 34px; padding: 0 10px; font-size: 14px; }
