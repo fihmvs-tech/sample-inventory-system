@@ -4,7 +4,7 @@ import { api, getConfig, clearConfig, isDemo } from '../api.js';
 import * as store from '../store.js';
 import { current, go, route } from '../router.js';
 import {
-  view, esc, toast, statusTag, loadingHtml, withBusy,
+  view, esc, toast, statusTag, loadingHtml, withBusy, QR_LIB, loadScriptOnce, itemUrl,
   borrowerFieldsHtml, bindBorrowerFields, reasonFieldsHtml, bindReasonFields, readReason,
 } from '../ui.js';
 
@@ -97,7 +97,8 @@ export async function admin() {
       <div class="card-head"><h2>展品管理</h2><span class="small muted">${esc(store.get().operatorName)}</span></div>
       <div class="btn-row">
         <a class="btn btn-primary" href="#/item-edit/new">新增展品</a>
-        <a class="btn" href="labels.html">列印 QR 標籤</a>
+        <a class="btn" href="#/borrow/proxy">代填借用</a>
+        <a class="btn" href="labels.html">列印展品標籤</a>
         <a class="btn" href="entry-qr.html">系統入口 QR Code</a>
       </div>
     </section>
@@ -223,6 +224,18 @@ export async function item(itemId) {
         ${it.status === '借出' ? '<button class="btn" type="button" id="show-transfer">移轉／延長借用</button>' : ''}
       </div>
     </section>
+    <section class="card item-label">
+      <div class="label-preview">
+        <div class="qr" id="item-qr" role="img" aria-label="${esc(it.item_id)} 的 QR Code"></div>
+        <div class="label-id">${esc(it.item_id)}</div>
+        <div class="label-name">${esc(it.name)}</div>
+      </div>
+      <div class="label-side">
+        <h2>展品標籤</h2>
+        <p class="small muted">貼在展品上，同仁用手機相機一掃就能借用或歸還。</p>
+        <a class="btn btn-primary" href="labels.html?ids=${encodeURIComponent(it.item_id)}">列印這件的標籤</a>
+      </div>
+    </section>
     <div id="transfer-box"></div>
     <section class="card">
       <h2>異動履歷</h2>
@@ -233,6 +246,16 @@ export async function item(itemId) {
           <div class="when">${esc(l.timestamp)}・${esc(l.operator)}${l.loan_id ? `・${esc(l.loan_id)}` : ''}</div>
         </li>`).join('')}</ul>` : '<p class="empty">尚無紀錄</p>'}
     </section>`;
+
+  loadScriptOnce(QR_LIB)
+    .then(() => {
+      const box = document.getElementById('item-qr');
+      if (box) new window.QRCode(box, { text: itemUrl(it.item_id), width: 240, height: 240, correctLevel: window.QRCode.CorrectLevel.M });
+    })
+    .catch(() => {
+      const box = document.getElementById('item-qr');
+      if (box) box.textContent = 'QR Code 無法載入，請檢查網路';
+    });
 
   view.querySelectorAll('[data-status]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -331,7 +354,7 @@ export async function itemEdit(itemId) {
           isNew,
           item: { item_id: f.item_id.value, name: f.name.value, category: f.category.value, location: f.location.value, note: f.note.value },
         });
-        toast(`已儲存 ${saved.item_id}`);
+        toast(isNew ? `已新增 ${saved.item_id}，可以在下方列印它的標籤` : `已儲存 ${saved.item_id}`);
         go(`#/item/${encodeURIComponent(saved.item_id)}`);
       } catch (err) {
         toast(err.message, 'error');

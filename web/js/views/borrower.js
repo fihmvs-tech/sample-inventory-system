@@ -74,7 +74,9 @@ function bindScanControls() {
       try {
         const result = await addScanned(id, form.dataset.manual);
         toast(result.message);
-        go(result.list === 'borrow' ? '#/borrow' : '#/return');
+        // 在代填模式（#/borrow/proxy）手動加入時留在原頁，不要跳回一般借用。
+        const borrowHash = location.hash.startsWith('#/borrow') ? location.hash : '#/borrow';
+        go(result.list === 'borrow' ? borrowHash : '#/return');
       } catch (err) {
         toast(err.message, 'error');
       }
@@ -114,7 +116,8 @@ export function home() {
 
 // ---- 借用 ----
 
-export async function borrow() {
+// #/borrow 是自己借用；管理者從 #/borrow/proxy 進入（或打開表單上的開關）就是幫同仁代填。
+export async function borrow(arg) {
   const live = current();
   const s = store.get();
   view.innerHTML = loadingHtml;
@@ -122,10 +125,12 @@ export async function borrow() {
   if (!live()) return;
 
   const admin = Boolean(s.adminKey && cfg.admin);
-  const people = admin ? cfg.borrowers || [] : s.recent;
-  const me = admin ? null : s.me;
+  const proxy = admin && arg === 'proxy';
+  const people = proxy ? cfg.borrowers || [] : s.recent;
+  const me = proxy ? null : s.me;
 
   view.innerHTML = `
+    ${proxy ? '<p class="notice">代填模式：掃描要借給同仁的展品，再填寫同仁的資料送出。紀錄會標示由你代填。</p>' : ''}
     <section class="card">
       <div class="card-head"><h2>借用清單</h2><span class="tag tag-info">${s.borrow.length} 件</span></div>
       ${s.borrow.length
@@ -138,7 +143,11 @@ export async function borrow() {
     ${s.borrow.length ? `
       <form class="card" id="checkout">
         <h2>借用資訊</h2>
-        ${admin ? '<p class="notice">管理者代填：請填寫實際借用人的資料，紀錄會標示由你代填。</p>' : ''}
+        ${admin ? `
+          <label class="switch-row" for="f-proxy">
+            <input type="checkbox" id="f-proxy" ${proxy ? 'checked' : ''}>
+            <span><b>幫同仁代填</b><br><span class="small muted">打開後請填寫實際借用人的資料；關閉則是你自己借用</span></span>
+          </label>` : ''}
         ${borrowerFieldsHtml({ domain: cfg.emailDomain, people, email: me?.email, name: me?.name })}
         ${reasonFieldsHtml(cfg.reasons)}
         <button class="btn btn-primary btn-lg btn-block" type="submit">確認借用 ${s.borrow.length} 件</button>
@@ -154,6 +163,10 @@ export async function borrow() {
 
   const form = document.getElementById('checkout');
   if (!form) return;
+  const proxySwitch = document.getElementById('f-proxy');
+  if (proxySwitch) {
+    proxySwitch.addEventListener('change', () => go(proxySwitch.checked ? '#/borrow/proxy' : '#/borrow'));
+  }
   bindBorrowerFields(form, { domain: cfg.emailDomain, people });
   bindReasonFields(form);
   form.addEventListener('input', () => { form.dataset.dirty = '1'; });
@@ -168,10 +181,12 @@ export async function borrow() {
           reason: readReason(form),
           expectedReturnDate: f.expected.value,
           itemIds: store.get().borrow.map((i) => i.item_id),
+          // 不帶管理者金鑰，後端就不會把管理者自己的借用記成代填。
+          ...(proxy ? {} : { adminKey: '' }),
         });
-        if (!admin) store.rememberBorrower(res.borrowerEmail, res.borrowerName);
+        if (!proxy) store.rememberBorrower(res.borrowerEmail, res.borrowerName);
         store.update({ borrow: [] });
-        showCheckoutDone(res);
+        showCheckoutDone(res, proxy);
       } catch (err) {
         toast(err.message, 'error');
       }
@@ -179,17 +194,18 @@ export async function borrow() {
   });
 }
 
-function showCheckoutDone(res) {
+function showCheckoutDone(res, proxy) {
   view.innerHTML = `
     <section class="card success">
       <div class="big" aria-hidden="true">✓</div>
-      <h1>借用完成</h1>
+      <h1>${proxy ? '代填完成' : '借用完成'}</h1>
       <p class="muted">借用單號 ${esc(res.loanId)}</p>
     </section>
     <section class="card">
       <dl class="info">
         <dt>借用者</dt><dd>${esc(res.borrowerName)}<br><span class="small muted">${esc(res.borrowerEmail)}</span></dd>
         <dt>預計歸還</dt><dd>${esc(res.expectedReturnDate)}</dd>
+        ${proxy ? `<dt>登記方式</dt><dd>管理者（${esc(store.get().operatorName)}）代填</dd>` : ''}
       </dl>
       <ul class="list">${res.items.map((i) => `<li><div class="main">${itemLine(i)}</div></li>`).join('')}</ul>
       <p class="small muted">逾期未歸還時，系統會寄 Email 提醒。歸還時掃描展品的 QR Code 即可。</p>

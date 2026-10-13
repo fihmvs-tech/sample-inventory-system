@@ -213,6 +213,17 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); o
 .tag-info { background: var(--info-bg); color: var(--primary); }
 
 .notice { padding: 10px 12px; border-radius: 10px; background: var(--info-bg); font-size: 14px; margin-bottom: 14px; }
+.switch-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  background: var(--info-bg);
+  cursor: pointer;
+}
+.switch-row input { flex: none; width: 22px; min-height: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--primary); }
 .notice-warn { background: var(--warn-bg); color: var(--warn); }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
@@ -238,6 +249,25 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); o
 dl.info { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; margin: 0 0 12px; }
 dl.info dt { color: var(--muted); }
 dl.info dd { margin: 0; overflow-wrap: anywhere; }
+
+/* 單品頁的展品標籤預覽：模擬實體標籤，兩種主題都是白底黑字 */
+.item-label { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.label-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: #111;
+}
+.label-preview .qr img, .label-preview .qr canvas { display: block; width: 120px; height: 120px; }
+.label-id { font-family: ui-monospace, Consolas, monospace; font-weight: 700; font-size: 16px; }
+.label-name { font-size: 12px; color: #444; max-width: 140px; text-align: center; overflow-wrap: anywhere; }
+.label-side { flex: 1 1 200px; min-width: 0; }
+.label-side h2 { margin-bottom: 4px; }
 
 .timeline { list-style: none; margin: 0; padding: 0; }
 .timeline li { padding: 10px 0 10px 14px; border-left: 2px solid var(--border); position: relative; }

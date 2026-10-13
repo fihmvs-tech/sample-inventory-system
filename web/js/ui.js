@@ -2,6 +2,28 @@
 
 export const view = document.getElementById('view');
 
+export const QR_LIB = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+
+const scripts = {};
+export function loadScriptOnce(src) {
+  scripts[src] ||= new Promise((resolve, reject) => {
+    const el = document.createElement('script');
+    el.src = src;
+    el.onload = resolve;
+    el.onerror = () => {
+      delete scripts[src];
+      reject(new Error('無法載入 ' + src));
+    };
+    document.head.appendChild(el);
+  });
+  return scripts[src];
+}
+
+// 展品標籤 QR Code 的內容：系統網址加上 ?item=編號，手機相機掃描就會開啟並放進清單。
+export function itemUrl(itemId) {
+  return new URL(`./?item=${encodeURIComponent(itemId)}`, location.href).href;
+}
+
 export function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }

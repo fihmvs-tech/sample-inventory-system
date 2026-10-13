@@ -1,21 +1,16 @@
 // 頁面內連續掃描：開一次相機就能掃多件，不用每掃一件就跳出新網頁。
 
-const LIB_URL = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
-let libPromise = null;
+import { loadScriptOnce } from './ui.js';
 
-function loadLib() {
-  if (window.Html5Qrcode) return Promise.resolve();
-  libPromise ||= new Promise((resolve, reject) => {
-    const el = document.createElement('script');
-    el.src = LIB_URL;
-    el.onload = resolve;
-    el.onerror = () => {
-      libPromise = null;
-      reject(new Error('無法載入掃描元件，請檢查網路'));
-    };
-    document.head.appendChild(el);
-  });
-  return libPromise;
+const LIB_URL = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+
+async function loadLib() {
+  if (window.Html5Qrcode) return;
+  try {
+    await loadScriptOnce(LIB_URL);
+  } catch {
+    throw new Error('無法載入掃描元件，請檢查網路');
+  }
 }
 
 // QR Code 內容可以是完整網址（…?item=A31）或單純的展品編號。

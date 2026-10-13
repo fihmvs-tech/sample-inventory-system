@@ -3,41 +3,49 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>QR 標籤列印</title>
+  <title>列印展品標籤</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/style.css">
   <style>
     body { padding-bottom: 24px; }
-    .labels { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+    .filters { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; }
+    .filters select { width: auto; }
+    .picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px 12px; max-height: 260px; overflow-y: auto; }
+    .pick { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 4px 0; }
+    .pick input { width: 18px; min-height: 18px; height: 18px; flex: none; }
+    .pick .status { font-size: 12px; color: var(--muted); }
+    .actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+    /* 標籤尺寸以公釐計，螢幕預覽與列印一致 */
+    .labels { display: flex; flex-wrap: wrap; gap: 4mm; }
+    .labels.size-s { --qr: 25mm; --id: 10pt; --name: 7pt; }
+    .labels.size-m { --qr: 35mm; --id: 12pt; --name: 8pt; }
+    .labels.size-l { --qr: 50mm; --id: 15pt; --name: 10pt; }
     .label {
-      display: flex; flex-direction: column; align-items: center; gap: 4px;
-      padding: 10px; border: 1px dashed var(--border); border-radius: 8px;
+      display: flex; flex-direction: column; align-items: center; gap: 1mm;
+      width: calc(var(--qr) + 8mm); padding: 3mm 2mm;
+      border: 1px dashed #999; border-radius: 2mm;
       background: #fff; color: #000; text-align: center; break-inside: avoid;
     }
-    .label .qr { width: 120px; height: 120px; }
-    .label .qr img, .label .qr canvas { width: 100% !important; height: 100% !important; }
-    .label .id { font: 700 18px ui-monospace, Consolas, monospace; }
-    .label .name { font-size: 12px; line-height: 1.3; overflow-wrap: anywhere; }
-    .pick { display: flex; align-items: center; gap: 8px; font-size: 14px; }
-    .pick input { width: auto; min-height: 0; }
-    .picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; max-height: 240px; overflow-y: auto; }
+    .label .qr img, .label .qr canvas { display: block; width: var(--qr) !important; height: var(--qr) !important; }
+    .label .id { font: 700 var(--id) ui-monospace, Consolas, monospace; }
+    .label .name { font-size: var(--name); line-height: 1.25; overflow-wrap: anywhere; }
+    @media (max-width: 520px) { .filters { grid-template-columns: 1fr 1fr; } .filters input { grid-column: 1 / -1; } }
     @media print {
-      @page { margin: 10mm; }
+      @page { margin: 8mm; }
       body { background: #fff; padding: 0; }
       .no-print { display: none !important; }
       .container { max-width: none; padding: 0; }
-      .labels { grid-template-columns: repeat(4, 1fr); gap: 6mm; }
-      .label { border-color: #999; }
     }
   </style>
 </head>
 <body>
-  <header class="topbar no-print"><a href="./#/admin" class="brand">← QR 標籤列印</a></header>
+  <header class="topbar no-print"><a href="./#/admin" class="brand">← 列印展品標籤</a></header>
   <main class="container">
     <section class="card no-print" id="controls">
       <p class="empty">載入中…</p>
     </section>
-    <div class="labels" id="labels"></div>
+    <div class="labels size-m" id="labels"></div>
   </main>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
