@@ -23,7 +23,7 @@ export async function addScanned(itemId, mode = 'auto') {
   if (item.status === '在庫' && mode !== 'return') {
     const exists = s.borrow.some((i) => i.item_id === item.item_id);
     if (!exists) store.update({ borrow: [...s.borrow, { item_id: item.item_id, name: item.name }] });
-    return { list: 'borrow', message: exists ? `${label} 已在借用清單中` : `已加入借用清單：${label}` };
+    return { list: 'borrow', added: !exists, message: exists ? `${label} 已在借用清單中` : `已加入借用清單：${label}` };
   }
   if (item.status === '借出' && mode !== 'borrow') {
     const exists = s.ret.some((i) => i.item_id === item.item_id);
@@ -38,7 +38,7 @@ export async function addScanned(itemId, mode = 'auto') {
         }],
       });
     }
-    return { list: 'return', message: exists ? `${label} 已在歸還清單中` : `已加入歸還清單：${label}` };
+    return { list: 'return', added: !exists, message: exists ? `${label} 已在歸還清單中` : `已加入歸還清單：${label}` };
   }
   throw new Error(`${label} 目前「${item.status}」，${mode === 'return' ? '不需要歸還' : '無法借用'}`);
 }
@@ -58,7 +58,7 @@ function bindScanControls() {
       const mode = button.dataset.scan;
       openScanner({
         title: SCAN_TITLES[mode],
-        onScan: async (id) => (await addScanned(id, mode)).message,
+        onScan: (id) => addScanned(id, mode),
         onClose: route,
       });
     });

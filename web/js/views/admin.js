@@ -98,6 +98,7 @@ export async function admin() {
       <div class="btn-row">
         <a class="btn btn-primary" href="#/item-edit/new">新增展品</a>
         <a class="btn" href="labels.html">列印 QR 標籤</a>
+        <a class="btn" href="entry-qr.html">系統入口 QR Code</a>
       </div>
     </section>
     ${overdue.length ? `

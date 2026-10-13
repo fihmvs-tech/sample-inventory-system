@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>系統入口 QR Code</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { padding-bottom: 24px; }
+    .poster { text-align: center; }
+    .poster h1 { font-size: 26px; margin-bottom: 4px; }
+    .poster .qr { display: inline-block; padding: 16px; margin: 16px 0 8px; background: #fff; border-radius: 12px; }
+    .poster .qr img, .poster .qr canvas { display: block; width: 260px; height: 260px; }
+    .poster .url { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+    @media print {
+      @page { margin: 15mm; }
+      body { background: #fff; color: #000; padding: 0; }
+      .no-print { display: none !important; }
+      .card { border: 0; box-shadow: none; }
+      .poster { padding-top: 20mm; }
+      .poster h1 { font-size: 32pt; }
+      .poster p { font-size: 16pt; }
+      .poster .qr img, .poster .qr canvas { width: 110mm; height: 110mm; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar no-print"><a href="./" class="brand">← 展品借還</a></header>
+  <main class="container">
+    <section class="card poster">
+      <h1>展品借還系統</h1>
+      <p class="muted">用手機相機掃描，開啟系統</p>
+      <div class="qr" id="qr" aria-label="系統入口 QR Code"></div>
+      <p class="url" id="url"></p>
+    </section>
+    <section class="card no-print">
+      <p class="small muted">可以印出來貼在展品櫃旁，或下載圖片分享到 LINE 群組。</p>
+      <div class="btn-row">
+        <button class="btn btn-primary" type="button" id="print">列印</button>
+        <button class="btn" type="button" id="download">下載圖片（PNG）</button>
+      </div>
+    </section>
+  </main>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script type="module" src="js/entry-qr.js"></script>
+</body>
+</html>

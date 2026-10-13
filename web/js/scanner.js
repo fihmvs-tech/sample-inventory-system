@@ -4,6 +4,7 @@ const LIB_URL = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
 let libPromise = null;
 
 function loadLib() {
+  if (window.Html5Qrcode) return Promise.resolve();
   libPromise ||= new Promise((resolve, reject) => {
     const el = document.createElement('script');
     el.src = LIB_URL;
@@ -37,8 +38,13 @@ function cameraError(err) {
   return '無法開啟相機：' + text;
 }
 
+const FLASH_MS = 2000;
+const SAME_CODE_MS = 4000;
+
 /**
- * 開啟全螢幕掃描畫面。onScan(itemId) 回傳成功訊息或丟出錯誤；按「完成」時呼叫 onClose。
+ * 開啟全螢幕掃描畫面。按「完成」時呼叫 onClose。
+ * onScan(itemId) 回傳 { message, added }，失敗時丟出錯誤：
+ * 每次掃描的結果都會在掃描框中央顯示 2 秒；下方清單只記錄新加入的展品與錯誤，同樣的訊息不重複。
  */
 export async function openScanner({ title, onScan, onClose }) {
   const overlay = document.createElement('div');
@@ -48,14 +54,30 @@ export async function openScanner({ title, onScan, onClose }) {
       <strong></strong>
       <button type="button" class="btn btn-primary" data-close>完成</button>
     </div>
-    <div id="qr-reader" class="scanner-video"></div>
+    <div class="scanner-stage">
+      <div id="qr-reader" class="scanner-video"></div>
+      <div class="scan-flash" role="status" aria-live="assertive" hidden></div>
+    </div>
     <p class="scanner-hint">將展品上的 QR Code 對準框內，可以連續掃描多件</p>
-    <ul class="scanner-log" aria-live="polite"></ul>`;
+    <ul class="scanner-log"></ul>`;
   overlay.querySelector('strong').textContent = title;
   document.body.appendChild(overlay);
   const log = overlay.querySelector('.scanner-log');
+  const flashEl = overlay.querySelector('.scan-flash');
 
+  let flashTimer = null;
+  const flash = (kind, text) => {
+    flashEl.textContent = text;
+    flashEl.className = `scan-flash ${kind}`;
+    flashEl.hidden = false;
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => { flashEl.hidden = true; }, FLASH_MS);
+  };
+
+  const logged = new Set();
   const addLog = (kind, text) => {
+    if (logged.has(text)) return;
+    logged.add(text);
     const li = document.createElement('li');
     li.className = kind;
     li.textContent = text;
@@ -64,7 +86,7 @@ export async function openScanner({ title, onScan, onClose }) {
 
   let scanner = null;
   let busy = false;
-  let last = { id: null, at: 0 };
+  let last = { text: null, at: 0 };
 
   overlay.querySelector('[data-close]').addEventListener('click', async () => {
     try {
@@ -85,18 +107,21 @@ export async function openScanner({ title, onScan, onClose }) {
       async (text) => {
         const id = parseItemId(text);
         const now = Date.now();
-        // 鏡頭停在同一個 QR Code 上會一直觸發，3 秒內同一件只處理一次。
-        if (busy || (id === last.id && now - last.at < 3000)) return;
-        last = { id, at: now };
+        // 鏡頭停在同一個 QR Code 上會一直觸發，4 秒內同一個內容只處理一次。
+        if (busy || (text === last.text && now - last.at < SAME_CODE_MS)) return;
+        last = { text, at: now };
         if (!id) {
-          addLog('err', '這不是展品的 QR Code');
+          flash('err', '這不是展品的 QR Code');
           return;
         }
         busy = true;
         try {
-          addLog('ok', await onScan(id));
+          const result = await onScan(id);
+          flash(result.added ? 'ok' : 'info', result.message);
+          if (result.added) addLog('ok', result.message);
           navigator.vibrate && navigator.vibrate(60);
         } catch (err) {
+          flash('err', err.message);
           addLog('err', err.message);
           navigator.vibrate && navigator.vibrate([40, 40, 40]);
         } finally {
