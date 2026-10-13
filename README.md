@@ -29,7 +29,7 @@ flowchart LR
 - **前端** `web/`：純 HTML／CSS／JavaScript，不需要建置工具，由 GitHub Actions 部署到 GitHub Pages（HTTPS，手機才能開相機）。
 - **後端** `apps-script/`：綁定在 Google Sheet 上的 Apps Script，部署成 Web App 當 JSON API；也負責每日催還信，寄件者是部署的 Google 帳號。
 - **資料**：Google Sheet 的五張工作表（見下方）。
-- **示範模式**：`web/js/config.js` 的 `API_URL` 留空時，前端會在瀏覽器裡直接執行 `apps-script/*.gs`（搭配模擬的 Google 服務），資料只存在該裝置，方便在部署前試用。
+- **示範模式**：`web/js/config.js` 的 `API_URL` 留空時，或在 localhost 預覽時，前端會在瀏覽器裡直接執行 `apps-script/*.gs`（搭配模擬的 Google 服務），資料只存在該裝置，不會動到正式資料。
 
 ```
 apps-script/        Apps Script 後端（Config、Db、Items、Loans、Notify、Setup、Code）

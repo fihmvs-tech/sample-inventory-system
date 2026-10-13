@@ -1,7 +1,8 @@
 import { API_URL } from './config.js';
 import * as store from './store.js';
 
-export const isDemo = !API_URL;
+// 本機預覽（localhost）一律用示範模式，開發時不會動到正式資料。
+export const isDemo = !API_URL || ['localhost', '127.0.0.1'].includes(location.hostname);
 
 // 所有後端呼叫都走這裡：POST {action, ...params}，回傳 data 或丟出錯誤訊息。
 export async function api(action, params = {}) {
