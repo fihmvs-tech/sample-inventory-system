@@ -12,7 +12,8 @@
     .poster h1 { font-size: 26px; margin-bottom: 4px; }
     .poster .qr { display: inline-block; padding: 16px; margin: 16px 0 8px; background: #fff; border-radius: 12px; }
     .poster .qr img, .poster .qr canvas { display: block; width: 260px; height: 260px; }
-    .poster .url { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+    .poster .url { font-size: 13px; overflow-wrap: anywhere; }
+    @media print { .poster .url a { color: #000; text-decoration: none; } }
     @media print {
       @page { margin: 15mm; }
       body { background: #fff; color: #000; padding: 0; }
@@ -32,12 +33,13 @@
       <h1>展品借還系統</h1>
       <p class="muted">用手機相機掃描，開啟系統</p>
       <div class="qr" id="qr" aria-label="系統入口 QR Code"></div>
-      <p class="url" id="url"></p>
+      <p class="url"><a id="url" href="./"></a></p>
     </section>
     <section class="card no-print">
       <p class="small muted">可以印出來貼在展品櫃旁，或下載圖片分享到 LINE 群組。</p>
       <div class="btn-row">
-        <button class="btn btn-primary" type="button" id="print">列印</button>
+        <a class="btn btn-primary" href="./">開啟系統首頁</a>
+        <button class="btn" type="button" id="print">列印</button>
         <button class="btn" type="button" id="download">下載圖片（PNG）</button>
       </div>
     </section>
