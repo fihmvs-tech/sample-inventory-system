@@ -146,7 +146,7 @@ export async function borrow(arg) {
         ${admin ? `
           <label class="switch-row" for="f-proxy">
             <input type="checkbox" id="f-proxy" ${proxy ? 'checked' : ''}>
-            <span><b>幫同仁代填</b><br><span class="small muted">打開後請填寫實際借用人的資料；關閉則是你自己借用</span></span>
+            <span><b>管理者幫同仁代填</b><br><span class="small muted">勾選代表幫同仁代填，請填寫實際借用人的資料；不勾選代表你自己借用</span></span>
           </label>` : ''}
         ${borrowerFieldsHtml({ domain: cfg.emailDomain, people, email: me?.email, name: me?.name })}
         ${reasonFieldsHtml(cfg.reasons)}
