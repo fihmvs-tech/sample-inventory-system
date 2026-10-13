@@ -24,12 +24,12 @@ function logout(message) {
   if (message) toast(message, 'error');
 }
 
-// 管理者 API 失敗時，若是金鑰失效就回到登入畫面。
+// 管理者 API 失敗時，若是密碼失效就回到登入畫面。
 async function adminApi(action, params) {
   try {
     return await api(action, params);
   } catch (err) {
-    if (/管理者金鑰/.test(err.message)) {
+    if (/管理者(密碼|金鑰)/.test(err.message)) {
       logout(err.message);
       go('#/admin');
     }
@@ -54,12 +54,12 @@ function login() {
     <form class="card" id="login">
       <h2>管理者登入</h2>
       <p class="small muted">管理者可以管理展品主檔、代同仁登記借用、查詢展品履歷與寄送催還信。</p>
-      ${isDemo ? '<p class="notice">示範模式的管理者金鑰是 <code>demo</code>。</p>' : ''}
+      ${isDemo ? '<p class="notice">示範模式的管理者密碼是 <code>demo</code>。</p>' : ''}
       <div class="field">
-        <label for="a-key">管理者金鑰</label>
+        <label for="a-key">管理者密碼</label>
         <div class="password-field">
           <input id="a-key" name="key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" required>
-          <button class="password-toggle" type="button" id="a-key-toggle" aria-controls="a-key" aria-pressed="false" aria-label="顯示金鑰" title="顯示金鑰">${EYE_ICON}</button>
+          <button class="password-toggle" type="button" id="a-key-toggle" aria-controls="a-key" aria-pressed="false" aria-label="顯示密碼" title="顯示密碼">${EYE_ICON}</button>
         </div>
       </div>
       <div class="field">
@@ -76,8 +76,8 @@ function login() {
     keyInput.type = show ? 'text' : 'password';
     toggle.innerHTML = show ? EYE_OFF_ICON : EYE_ICON;
     toggle.setAttribute('aria-pressed', String(show));
-    toggle.setAttribute('aria-label', show ? '隱藏金鑰' : '顯示金鑰');
-    toggle.title = show ? '隱藏金鑰' : '顯示金鑰';
+    toggle.setAttribute('aria-label', show ? '隱藏密碼' : '顯示密碼');
+    toggle.title = show ? '隱藏密碼' : '顯示密碼';
     keyInput.focus();
   });
   form.addEventListener('submit', (e) => {

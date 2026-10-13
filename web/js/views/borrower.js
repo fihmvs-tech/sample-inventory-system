@@ -181,7 +181,7 @@ export async function borrow(arg) {
           reason: readReason(form),
           expectedReturnDate: f.expected.value,
           itemIds: store.get().borrow.map((i) => i.item_id),
-          // 不帶管理者金鑰，後端就不會把管理者自己的借用記成代填。
+          // 不帶管理者密碼，後端就不會把管理者自己的借用記成代填。
           ...(proxy ? {} : { adminKey: '' }),
         });
         if (!proxy) store.rememberBorrower(res.borrowerEmail, res.borrowerName);

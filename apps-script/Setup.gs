@@ -1,8 +1,8 @@
 /**
  * 初始化與維護：在 Apps Script 編輯器手動執行這些函式。
- *   setup()          建立工作表、預設設定、管理者金鑰與每日催還排程（可重複執行）
- *   showAdminKey()   在執行紀錄中顯示管理者金鑰
- *   resetAdminKey()  產生新的管理者金鑰（舊金鑰立即失效）
+ *   setup()          建立工作表、預設設定、管理者密碼與每日催還排程（可重複執行）
+ *   showAdminKey()   在執行紀錄中顯示管理者密碼
+ *   resetAdminKey()  產生新的管理者密碼（舊密碼立即失效）
  */
 
 function setup() {
@@ -12,24 +12,41 @@ function setup() {
   seedSettings_();
   ensureAdminKey_();
   installReminderTrigger_();
-  Logger.log('初始化完成。管理者金鑰請執行 showAdminKey() 查看。');
+  Logger.log('初始化完成。管理者密碼請執行 showAdminKey() 查看。');
 }
 
 function showAdminKey() {
-  Logger.log('管理者金鑰：' + ensureAdminKey_());
+  Logger.log('管理者密碼：' + ensureAdminKey_());
 }
 
 function resetAdminKey() {
   PropertiesService.getScriptProperties().deleteProperty('ADMIN_KEY');
-  Logger.log('新的管理者金鑰：' + ensureAdminKey_());
+  Logger.log('新的管理者密碼：' + ensureAdminKey_());
 }
 
 function ensureAdminKey_() {
   const props = PropertiesService.getScriptProperties();
   let key = props.getProperty('ADMIN_KEY');
   if (!key) {
-    key = Utilities.getUuid().replace(/-/g, '').slice(0, 16);
+    key = newAdminKey_();
     props.setProperty('ADMIN_KEY', key);
+  }
+  return key;
+}
+
+// 8 碼小寫英文＋數字，去掉容易看錯的 0 o 1 l，方便在手機上輸入（32 個字元，約 1.1 兆種組合）。
+const ADMIN_KEY_LENGTH = 8;
+const ADMIN_KEY_CHARS = 'abcdefghijkmnpqrstuvwxyz23456789';
+
+function newAdminKey_() {
+  let key = '';
+  while (key.length < ADMIN_KEY_LENGTH) {
+    // UUID v4 的第 7、9 個位元組含固定的版本與變體位元，跳過不用；其餘位元組是隨機的。
+    const hex = Utilities.getUuid().replace(/-/g, '');
+    for (let i = 0; i < 16 && key.length < ADMIN_KEY_LENGTH; i++) {
+      if (i === 6 || i === 8) continue;
+      key += ADMIN_KEY_CHARS[parseInt(hex.substr(i * 2, 2), 16) % ADMIN_KEY_CHARS.length];
+    }
   }
   return key;
 }

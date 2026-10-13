@@ -61,7 +61,7 @@ tools/serve.ps1     本機預覽用的靜態伺服器
 1. 以專案用的 Google 帳號登入，建立一個新的 Google 試算表。
 2. 「擴充功能 → Apps Script」，把 `apps-script/` 內每個 `.gs` 檔建立成同名檔案並貼上內容；在「專案設定」勾選「在編輯器中顯示 appsscript.json」後，貼上 `appsscript.json`。
 3. 在編輯器選擇函式 `setup` 執行，依提示授權。完成後試算表會出現五張工作表，並建立每日催還排程。
-4. 執行 `showAdminKey`，在執行紀錄中取得**管理者金鑰**（不要提交到 Git）。
+4. 執行 `showAdminKey`，在執行紀錄中取得**管理者密碼**（不要提交到 Git）。
 5. 「部署 → 新增部署作業 → 網頁應用程式」：執行身分「我」、存取權「所有人」，部署後複製網址（`https://script.google.com/macros/s/…/exec`）。
 
 ### 2. 前端（GitHub Pages）
@@ -81,11 +81,11 @@ tools/serve.ps1     本機預覽用的靜態伺服器
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/serve.ps1
 ```
 
-- 前端（示範模式）：http://localhost:8080/web/ ，管理者金鑰 `demo`
+- 前端（示範模式）：http://localhost:8080/web/ ，管理者密碼 `demo`
 - 後端測試：http://localhost:8080/tests/ ，在瀏覽器中以模擬的 Google 服務執行 `apps-script/*.gs`
 
 ## 安全性說明
 
-- 這個 repo 是**公開**的：管理者金鑰、試算表 ID、密碼都不可以寫進程式碼，金鑰只存在 Apps Script 的指令碼屬性。
-- Web App 存取權為「所有人」以降低借用門檻；寫入動作有鎖定，管理功能需要管理者金鑰。
+- 這個 repo 是**公開**的：管理者密碼、試算表 ID、帳號密碼都不可以寫進程式碼；管理者密碼（8 碼，不分大小寫）只存在 Apps Script 的指令碼屬性。
+- Web App 存取權為「所有人」以降低借用門檻；寫入動作有鎖定，管理功能需要管理者密碼。
 - 一般使用者的查詢只會看到借用者姓名，借用者 Email 名單與單品履歷僅限管理者。

@@ -12,7 +12,7 @@ function doPost(e) {
     const req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     const route = routes_()[req.action];
     if (!route) throw new Error('未知的動作：' + req.action);
-    if (route.admin && !isAdmin_(req.adminKey)) throw new Error('管理者金鑰錯誤，請重新登入管理者模式');
+    if (route.admin && !isAdmin_(req.adminKey)) throw new Error('管理者密碼錯誤，請重新登入管理者模式');
     const data = route.write ? withLock_(function () { return route.handler(req); }) : route.handler(req);
     return json_({ ok: true, data: data });
   } catch (err) {
@@ -63,9 +63,11 @@ function apiGetConfig_(req) {
 
 // ---- 權限與輸入驗證 ----
 
+// 密碼不分大小寫，避免手機鍵盤自動把第一個字母轉成大寫。
 function isAdmin_(key) {
   const real = PropertiesService.getScriptProperties().getProperty('ADMIN_KEY');
-  return !!real && !!key && String(key) === real;
+  const given = String(key || '').trim().toLowerCase();
+  return !!real && !!given && given === real.toLowerCase();
 }
 
 function adminOperator_(req) {

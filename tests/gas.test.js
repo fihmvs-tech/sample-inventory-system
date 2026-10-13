@@ -71,7 +71,7 @@ test('setup 建立五張工作表、預設設定與每日排程', () => {
 });
 
 test('非管理者不能新增展品，管理者可以', () => {
-  fails('saveItem', { item: { item_id: 'A01', name: 'x' } }, false, /管理者金鑰/);
+  fails('saveItem', { item: { item_id: 'A01', name: 'x' } }, false, /管理者密碼/);
   ok('saveItem', { item: { item_id: 'a01', name: '展示螢幕' }, isNew: true }, true);
   eq(ok('getItem', { itemId: 'A01' }).status, '在庫', '新展品狀態（編號自動轉大寫）');
   fails('saveItem', { item: { item_id: 'A01', name: '重複' }, isNew: true }, true, /已存在/);
@@ -162,7 +162,7 @@ test('單品履歷：依時間由新到舊列出所有異動', () => {
   eq(h.logs.map((r) => r.action), ['送修', '完全歸還', '借出', '新增'], '履歷');
   eq(h.logs[0].detail, '在庫 → 送修；螢幕刮傷', '送修說明');
   eq(h.loans.length, 1, '借用紀錄');
-  fails('getHistory', { itemId: 'A31' }, false, /管理者金鑰/);
+  fails('getHistory', { itemId: 'A31' }, false, /管理者密碼/);
 });
 
 test('送修中的展品不能借用；借出中的展品不能直接改狀態', () => {
@@ -216,7 +216,7 @@ test('刪除展品：從主檔移除、保留歷史並記錄日誌；借出中�
   ok('checkin', { itemIds: ['A02'] });
   borrow(['A03']);
 
-  fails('deleteItem', { itemId: 'A01' }, false, /管理者金鑰/);
+  fails('deleteItem', { itemId: 'A01' }, false, /管理者密碼/);
   const res = ok('deleteItem', { itemId: 'a02', operatorName: '小王' }, true);
   eq(res, { item_id: 'A02', name: '展品 A02' }, '回傳');
   eq(sheetRows('Items').map((r) => r.item_id), ['A01', 'A03'], '主檔只剩 A01、A03');
@@ -234,12 +234,25 @@ test('刪除展品：從主檔移除、保留歷史並記錄日誌；借出中�
   eq(ok('getItem', { itemId: 'A02' }).name, '重新建立', '刪除後可用同編號重新建立');
 });
 
-test('未知動作與錯誤的管理者金鑰會回傳錯誤', () => {
+test('管理者密碼：8 碼小寫英數、不分大小寫、重設後舊密碼失效', () => {
+  delete state.props.ADMIN_KEY;
+  const key = window.ensureAdminKey_();
+  eq(/^[a-km-np-z2-9]{8}$/.test(key), true, `格式（${key}）`);
+  eq(window.ensureAdminKey_(), key, '已有密碼時不會重新產生');
+  eq(call('verifyAdmin', { adminKey: key.toUpperCase() }).ok, true, '大寫也能登入');
+  eq(call('verifyAdmin', { adminKey: ` ${key} ` }).ok, true, '前後空白會忽略');
+  window.resetAdminKey();
+  eq(state.props.ADMIN_KEY !== key && /^[a-km-np-z2-9]{8}$/.test(state.props.ADMIN_KEY), true, '重設後換成新的 8 碼密碼');
+  eq(call('verifyAdmin', { adminKey: key }).ok, false, '舊密碼失效');
+  eq(new Set(Array.from({ length: 200 }, () => window.newAdminKey_())).size, 200, '200 次產生都不重複');
+});
+
+test('未知動作與錯誤的管理者密碼會回傳錯誤', () => {
   fails('dropTables', {}, false, /未知的動作/);
-  eq(call('verifyAdmin', { adminKey: 'wrong' }).ok, false, '錯誤金鑰');
-  eq(call('verifyAdmin', {}, true).ok, true, '正確金鑰');
+  eq(call('verifyAdmin', { adminKey: 'wrong' }).ok, false, '錯誤密碼');
+  eq(call('verifyAdmin', {}, true).ok, true, '正確密碼');
   state.props.ADMIN_KEY = '';
-  eq(call('verifyAdmin', { adminKey: '' }).ok, false, '未設定金鑰時，空字串不能通過');
+  eq(call('verifyAdmin', { adminKey: '' }).ok, false, '未設定密碼時，空字串不能通過');
 });
 
 async function run() {
