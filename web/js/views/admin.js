@@ -45,6 +45,10 @@ function requireLogin() {
 
 // ---- 登入 ----
 
+const ICON_ATTRS = 'width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+const EYE_ICON = `<svg ${ICON_ATTRS}><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const EYE_OFF_ICON = `<svg ${ICON_ATTRS}><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+
 function login() {
   view.innerHTML = `
     <form class="card" id="login">
@@ -53,7 +57,10 @@ function login() {
       ${isDemo ? '<p class="notice">示範模式的管理者金鑰是 <code>demo</code>。</p>' : ''}
       <div class="field">
         <label for="a-key">管理者金鑰</label>
-        <input id="a-key" name="key" type="password" autocomplete="off" required>
+        <div class="password-field">
+          <input id="a-key" name="key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" required>
+          <button class="password-toggle" type="button" id="a-key-toggle" aria-controls="a-key" aria-pressed="false" aria-label="顯示金鑰" title="顯示金鑰">${EYE_ICON}</button>
+        </div>
       </div>
       <div class="field">
         <label for="a-name">你的名字</label>
@@ -62,6 +69,17 @@ function login() {
       <button class="btn btn-primary btn-block" type="submit">登入</button>
     </form>`;
   const form = document.getElementById('login');
+  const keyInput = document.getElementById('a-key');
+  const toggle = document.getElementById('a-key-toggle');
+  toggle.addEventListener('click', () => {
+    const show = keyInput.type === 'password';
+    keyInput.type = show ? 'text' : 'password';
+    toggle.innerHTML = show ? EYE_OFF_ICON : EYE_ICON;
+    toggle.setAttribute('aria-pressed', String(show));
+    toggle.setAttribute('aria-label', show ? '隱藏金鑰' : '顯示金鑰');
+    toggle.title = show ? '隱藏金鑰' : '顯示金鑰';
+    keyInput.focus();
+  });
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const key = form.elements.key.value.trim();

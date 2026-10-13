@@ -177,6 +177,27 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); o
   white-space: nowrap;
   font-size: 14px;
 }
+/* 密碼欄位右側的「顯示／隱藏」眼睛按鈕 */
+.password-field { position: relative; }
+.password-field input { padding-right: 48px; }
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.password-toggle:hover { color: var(--text); background: var(--surface-2); }
+.password-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 0; }
 .inline-form { display: flex; gap: 8px; }
 .inline-form input { flex: 1; min-width: 0; }
 
