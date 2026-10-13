@@ -266,6 +266,59 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); o
 }
 .chip[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
 
+/* 首頁的「下一步」卡片 */
+.next-step { border: 2px solid var(--primary); }
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--info-bg);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.mini-list { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 4px; font-size: 15px; }
+
+/* 借用／歸還頁的步驟編號 */
+.step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-text);
+  font-size: 14px;
+  vertical-align: 2px;
+}
+.empty-state { text-align: center; }
+.empty-state .inline-form { text-align: left; }
+.form-foot { margin: 10px 0 0; text-align: center; }
+.btn-col { display: grid; gap: 10px; }
+.summary { display: grid; gap: 2px; }
+.summary-warn { border-color: var(--danger); background: var(--danger-bg); }
+
+/* 管理頁的快捷操作 */
+.quick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.quick {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+}
+.quick span { font-size: 13px; color: var(--muted); }
+.quick-primary { border-color: var(--primary); background: var(--info-bg); }
+.quick-primary b { color: var(--primary); }
+.action-panel { border-color: var(--primary); }
+
 .steps { margin: 0; padding-left: 20px; color: var(--muted); }
 .steps li { margin-bottom: 4px; }
 
@@ -325,15 +378,18 @@ dl.info dd { margin: 0; overflow-wrap: anywhere; }
 .tabbar a {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   color: var(--muted);
   text-decoration: none;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
 }
 .tabbar a[aria-current="page"] { color: var(--primary); }
+.tab-icon { position: relative; display: flex; }
+.tab-icon .badge { position: absolute; top: -6px; left: 14px; }
 .badge {
   min-width: 20px;
   height: 20px;
@@ -345,6 +401,52 @@ dl.info dd { margin: 0; overflow-wrap: anywhere; }
   line-height: 20px;
   text-align: center;
 }
+
+/* ---- 底部清單列（像點餐 App 的購物車） ---- */
+.cartbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  z-index: 9;
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 12px rgba(16, 24, 40, 0.08);
+}
+.cartbar-btn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: var(--primary);
+  color: var(--primary-text);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.cartbar-return { background: var(--ok); color: #fff; }
+.cart-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1c2330;
+  font-size: 14px;
+}
+.cart-go { margin-left: auto; font-size: 14px; }
+body.has-cartbar { padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 80px); }
+body.has-cartbar .toast { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 76px); }
 
 .toast {
   position: fixed;
@@ -412,3 +514,12 @@ dl.info dd { margin: 0; overflow-wrap: anywhere; }
 .scanner-log li { padding: 8px 12px; border-radius: 8px; margin-bottom: 6px; font-size: 15px; }
 .scanner-log li.ok { background: #173323; color: #8ee0a8; }
 .scanner-log li.err { background: #3b1d1d; color: #ffaba5; }
+.scanner-actions {
+  display: grid;
+  gap: 8px;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  background: #111;
+  border-top: 1px solid #333;
+}
+.btn-light { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.35); color: #fff; }

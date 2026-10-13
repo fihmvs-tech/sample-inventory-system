@@ -112,12 +112,12 @@ export async function admin() {
 
   view.innerHTML = `
     <section class="card">
-      <div class="card-head"><h2>展品管理</h2><span class="small muted">${esc(store.get().operatorName)}</span></div>
-      <div class="btn-row">
-        <a class="btn btn-primary" href="#/item-edit/new">新增展品</a>
-        <a class="btn" href="#/borrow/proxy">代填借用</a>
-        <a class="btn" href="labels.html">列印展品標籤</a>
-        <a class="btn" href="entry-qr.html">系統入口 QR Code</a>
+      <div class="card-head"><h2>展品管理</h2><span class="small muted">管理者：${esc(store.get().operatorName)}</span></div>
+      <div class="quick-grid">
+        <a class="quick quick-primary" href="#/item-edit/new"><b>新增展品</b><span>建立展品，存檔後即可列印標籤</span></a>
+        <a class="quick" href="#/borrow/proxy"><b>代填借用</b><span>幫不方便操作的同仁登記借用</span></a>
+        <a class="quick" href="labels.html"><b>列印展品標籤</b><span>批次列印貼在展品上的 QR Code</span></a>
+        <a class="quick" href="entry-qr.html"><b>系統入口 QR Code</b><span>列印海報或分享到 LINE 群組</span></a>
       </div>
     </section>
     ${overdue.length ? `
@@ -243,7 +243,7 @@ export async function item(itemId) {
         ${it.status !== '借出' ? '<button class="btn btn-danger" type="button" id="show-delete">刪除展品</button>' : ''}
       </div>
     </section>
-    <div id="delete-box"></div>
+    <div id="action-box"></div>
     <section class="card item-label">
       <div class="label-preview">
         <div class="qr" id="item-qr" role="img" aria-label="${esc(it.item_id)} 的 QR Code"></div>
@@ -278,20 +278,7 @@ export async function item(itemId) {
     });
 
   view.querySelectorAll('[data-status]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const status = button.dataset.status;
-      const note = prompt(`將 ${it.item_id} 改為「${status}」。說明（可留空）：`, '');
-      if (note === null) return;
-      withBusy(button, '處理中…', async () => {
-        try {
-          await adminApi('setItemStatus', { itemId: it.item_id, status, note });
-          toast(`${it.item_id} 已改為「${status}」`);
-          route();
-        } catch (err) {
-          toast(err.message, 'error');
-        }
-      });
-    });
+    button.addEventListener('click', () => statusPanel(it, button.dataset.status));
   });
   const showTransfer = document.getElementById('show-transfer');
   if (showTransfer) showTransfer.addEventListener('click', () => transferForm(it));
@@ -299,9 +286,50 @@ export async function item(itemId) {
   if (showDelete) showDelete.addEventListener('click', () => deletePanel(it));
 }
 
+const STATUS_HINTS = {
+  送修: '例如：螢幕刮傷，送原廠維修',
+  遺失: '例如：展覽結束後找不到',
+  報廢: '例如：損壞無法修復',
+  在庫: '例如：已修好並放回 A 櫃',
+};
+
+// 變更狀態前在頁面上確認，並可以順便寫下原因（會記在異動履歷）。
+function statusPanel(it, status) {
+  const box = document.getElementById('action-box');
+  box.innerHTML = `
+    <form class="card action-panel" id="status-form" aria-labelledby="status-title">
+      <h2 id="status-title">將 ${esc(it.item_id)} 改為「${esc(status)}」</h2>
+      <div class="field">
+        <label for="s-note">說明（可留空）</label>
+        <input id="s-note" name="note" placeholder="${esc(STATUS_HINTS[status] || '')}">
+        <div class="hint">會記錄在這件展品的異動履歷中。</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" type="button" data-cancel>取消</button>
+        <button class="btn btn-primary" type="submit">確定改為「${esc(status)}」</button>
+      </div>
+    </form>`;
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const form = document.getElementById('status-form');
+  form.elements.note.focus({ preventScroll: true });
+  box.querySelector('[data-cancel]').addEventListener('click', () => { box.innerHTML = ''; });
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    withBusy(form.querySelector('[type=submit]'), '處理中…', async () => {
+      try {
+        await adminApi('setItemStatus', { itemId: it.item_id, status, note: form.elements.note.value });
+        toast(`${it.item_id} 已改為「${status}」`);
+        route();
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    });
+  });
+}
+
 // 刪除前在頁面上再確認一次，說清楚會發生什麼事。
 function deletePanel(it) {
-  const box = document.getElementById('delete-box');
+  const box = document.getElementById('action-box');
   box.innerHTML = `
     <section class="card danger-zone" role="alertdialog" aria-labelledby="delete-title">
       <h2 id="delete-title">刪除 ${esc(it.item_id)} ${esc(it.name)}？</h2>

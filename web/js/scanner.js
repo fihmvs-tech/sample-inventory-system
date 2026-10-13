@@ -37,28 +37,59 @@ const FLASH_MS = 2000;
 const SAME_CODE_MS = 4000;
 
 /**
- * 開啟全螢幕掃描畫面。按「完成」時呼叫 onClose。
- * onScan(itemId) 回傳 { message, added }，失敗時丟出錯誤：
- * 每次掃描的結果都會在掃描框中央顯示 2 秒；下方清單只記錄新加入的展品與錯誤，同樣的訊息不重複。
+ * 開啟全螢幕掃描畫面。
+ * - onScan(itemId) 回傳 { message, added, list }，失敗時丟出錯誤。每次結果都在掃描框中央顯示 2 秒；
+ *   下方紀錄只列新加入的展品與錯誤，同樣的訊息不重複。
+ * - actions() 回傳 [{ key, label }]：畫面底部的「下一步」按鈕，每次掃描後更新；按下時關閉並呼叫 onAction(key)。
+ * - 按「完成」時呼叫 onClose(added)，added 是這次新加入過展品的清單（'borrow'／'return'）。
  */
-export async function openScanner({ title, onScan, onClose }) {
+export async function openScanner({ title, onScan, onClose, actions, onAction }) {
   const overlay = document.createElement('div');
   overlay.className = 'scanner';
   overlay.innerHTML = `
     <div class="scanner-head">
       <strong></strong>
-      <button type="button" class="btn btn-primary" data-close>完成</button>
+      <button type="button" class="btn btn-light" data-close>完成</button>
     </div>
     <div class="scanner-stage">
       <div id="qr-reader" class="scanner-video"></div>
       <div class="scan-flash" role="status" aria-live="assertive" hidden></div>
     </div>
     <p class="scanner-hint">將展品上的 QR Code 對準框內，可以連續掃描多件</p>
-    <ul class="scanner-log"></ul>`;
+    <ul class="scanner-log"></ul>
+    <div class="scanner-actions" hidden></div>`;
   overlay.querySelector('strong').textContent = title;
   document.body.appendChild(overlay);
   const log = overlay.querySelector('.scanner-log');
   const flashEl = overlay.querySelector('.scan-flash');
+  const actionsEl = overlay.querySelector('.scanner-actions');
+  const added = new Set();
+
+  const close = async () => {
+    try {
+      if (scanner && scanner.isScanning) await scanner.stop();
+    } catch {
+      // 相機已經關閉。
+    }
+    overlay.remove();
+  };
+
+  const renderActions = () => {
+    const list = actions ? actions() : [];
+    actionsEl.replaceChildren(...list.map(({ key, label }) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn btn-primary btn-lg btn-block';
+      button.textContent = label;
+      button.addEventListener('click', async () => {
+        await close();
+        onAction && onAction(key);
+      });
+      return button;
+    }));
+    actionsEl.hidden = list.length === 0;
+  };
+  renderActions();
 
   let flashTimer = null;
   const flash = (kind, text) => {
@@ -84,13 +115,8 @@ export async function openScanner({ title, onScan, onClose }) {
   let last = { text: null, at: 0 };
 
   overlay.querySelector('[data-close]').addEventListener('click', async () => {
-    try {
-      if (scanner && scanner.isScanning) await scanner.stop();
-    } catch {
-      // 相機已經關閉。
-    }
-    overlay.remove();
-    onClose && onClose();
+    await close();
+    onClose && onClose(added);
   });
 
   try {
@@ -113,7 +139,11 @@ export async function openScanner({ title, onScan, onClose }) {
         try {
           const result = await onScan(id);
           flash(result.added ? 'ok' : 'info', result.message);
-          if (result.added) addLog('ok', result.message);
+          if (result.added) {
+            addLog('ok', result.message);
+            added.add(result.list);
+          }
+          renderActions();
           navigator.vibrate && navigator.vibrate(60);
         } catch (err) {
           flash('err', err.message);

@@ -1,15 +1,25 @@
 // 借用者畫面：首頁、借用清單、歸還清單、我的借用。
+// 每個畫面都把「下一步」放在最顯眼的位置：掃完 → 前往清單 → 填寫／確認 → 完成。
 
 import { api, getConfig } from '../api.js';
 import * as store from '../store.js';
 import { openScanner, parseItemId } from '../scanner.js';
 import { current, go, route } from '../router.js';
 import {
-  view, esc, toast, statusTag, loadingHtml, withBusy, stripDomain,
+  view, esc, toast, statusTag, loadingHtml, withBusy, stripDomain, ICONS,
   borrowerFieldsHtml, bindBorrowerFields, reasonFieldsHtml, bindReasonFields, readReason,
 } from '../ui.js';
 
 const SCAN_TITLES = { auto: '掃描展品', borrow: '掃描要借用的展品', return: '掃描要歸還的展品' };
+
+// 代填模式（#/borrow/proxy）中加入展品時，留在代填模式。
+function borrowHash() {
+  return location.hash.startsWith('#/borrow') ? location.hash : '#/borrow';
+}
+
+export function listHash(list) {
+  return list === 'borrow' ? borrowHash() : '#/return';
+}
 
 /**
  * 依展品狀態放進對應清單：在庫 → 借用清單，借出 → 歸還清單。
@@ -43,27 +53,65 @@ export async function addScanned(itemId, mode = 'auto') {
   throw new Error(`${label} 目前「${item.status}」，${mode === 'return' ? '不需要歸還' : '無法借用'}`);
 }
 
-function scanControlsHtml(mode, buttonLabel) {
+// 掃描畫面底部的「下一步」按鈕，依目前清單件數即時更新。
+function scanActions(mode) {
+  return () => {
+    const s = store.get();
+    const actions = [];
+    if (mode !== 'return' && s.borrow.length) {
+      actions.push({ key: 'borrow', label: mode === 'borrow' ? `完成，回到借用清單（${s.borrow.length} 件）` : `前往借用清單（${s.borrow.length} 件）填寫送出 →` });
+    }
+    if (mode !== 'borrow' && s.ret.length) {
+      actions.push({ key: 'return', label: mode === 'return' ? `完成，回到歸還清單（${s.ret.length} 件）` : `前往歸還清單（${s.ret.length} 件）確認歸還 →` });
+    }
+    return actions;
+  };
+}
+
+function startScanner(mode) {
+  openScanner({
+    title: SCAN_TITLES[mode],
+    onScan: (id) => addScanned(id, mode),
+    actions: scanActions(mode),
+    onAction: (list) => go(listHash(list)),
+    // 在首頁或其他頁掃完直接按「完成」：有新加入的展品就帶到對應清單；在清單頁則留在原頁。
+    onClose: (added) => {
+      if (mode !== 'auto' || !added.size) route();
+      else go(listHash(added.has('borrow') ? 'borrow' : 'return'));
+    },
+  });
+}
+
+function manualFormHtml(mode, hidden) {
   return `
-    <button class="btn btn-block ${mode === 'auto' ? 'btn-primary btn-lg' : ''}" type="button" data-scan="${mode}">${buttonLabel}</button>
-    <form class="inline-form mt" data-manual="${mode}">
-      <input name="id" placeholder="或輸入展品編號，例如 A31" autocomplete="off" autocapitalize="characters" aria-label="展品編號">
+    <form class="inline-form mt" data-manual="${mode}" ${hidden ? 'hidden' : ''}>
+      <input name="id" placeholder="輸入展品編號，例如 A31" autocomplete="off" autocapitalize="characters" aria-label="展品編號">
       <button class="btn" type="submit">加入</button>
     </form>`;
 }
 
-function bindScanControls() {
-  view.querySelectorAll('[data-scan]').forEach((button) => {
+// 清單頁的小型控制列：再掃一件、輸入編號（點了才展開）。
+function listScanControlsHtml(mode) {
+  return `
+    <div class="btn-row mt">
+      <button class="btn" type="button" data-scan="${mode}">${ICONS.scan}再掃一件</button>
+      <button class="btn" type="button" data-manual-toggle>輸入編號</button>
+    </div>
+    ${manualFormHtml(mode, true)}`;
+}
+
+function bindScanControls(root = view) {
+  root.querySelectorAll('[data-scan]').forEach((button) => {
+    button.addEventListener('click', () => startScanner(button.dataset.scan));
+  });
+  root.querySelectorAll('[data-manual-toggle]').forEach((button) => {
     button.addEventListener('click', () => {
-      const mode = button.dataset.scan;
-      openScanner({
-        title: SCAN_TITLES[mode],
-        onScan: (id) => addScanned(id, mode),
-        onClose: route,
-      });
+      const form = root.querySelector('[data-manual]');
+      form.hidden = !form.hidden;
+      if (!form.hidden) form.elements.id.focus();
     });
   });
-  view.querySelectorAll('[data-manual]').forEach((form) => {
+  root.querySelectorAll('[data-manual]').forEach((form) => {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const id = parseItemId(form.elements.id.value);
@@ -74,9 +122,7 @@ function bindScanControls() {
       try {
         const result = await addScanned(id, form.dataset.manual);
         toast(result.message);
-        // 在代填模式（#/borrow/proxy）手動加入時留在原頁，不要跳回一般借用。
-        const borrowHash = location.hash.startsWith('#/borrow') ? location.hash : '#/borrow';
-        go(result.list === 'borrow' ? borrowHash : '#/return');
+        go(listHash(result.list));
       } catch (err) {
         toast(err.message, 'error');
       }
@@ -88,35 +134,76 @@ function itemLine(i, extra = '') {
   return `<div class="title"><span class="item-id">${esc(i.item_id)}</span> ${esc(i.name)}</div>${extra}`;
 }
 
+function removableList(items, extra) {
+  return `<ul class="list">${items.map((i) => `
+    <li><div class="main">${itemLine(i, extra ? extra(i) : '')}</div>
+      <button class="btn btn-sm" type="button" data-remove="${esc(i.item_id)}" aria-label="從清單移除 ${esc(i.item_id)}">移除</button></li>`).join('')}</ul>`;
+}
+
+function bindRemove(listKey) {
+  view.querySelectorAll('[data-remove]').forEach((button) => {
+    button.addEventListener('click', () => {
+      store.update({ [listKey]: store.get()[listKey].filter((i) => i.item_id !== button.dataset.remove) });
+      route();
+    });
+  });
+}
+
+function emptyStateHtml(mode) {
+  const borrow = mode === 'borrow';
+  return `
+    <section class="card empty-state">
+      <h2>${borrow ? '還沒有要借的展品' : '還沒有要歸還的展品'}</h2>
+      <p class="muted">${borrow ? '掃描展品上的 QR Code，就會加入借用清單。可以連續掃描多件。' : '逐件掃描要歸還的展品，可以只還其中幾件。'}</p>
+      <button class="btn btn-primary btn-lg btn-block" type="button" data-scan="${mode}">${ICONS.scan}掃描 QR Code</button>
+      ${manualFormHtml(mode, false)}
+    </section>`;
+}
+
 // ---- 首頁 ----
+
+function nextStepHtml(list, items) {
+  const borrow = list === 'borrow';
+  const shown = items.slice(0, 3).map((i) => `<li><span class="item-id">${esc(i.item_id)}</span> ${esc(i.name)}</li>`).join('');
+  const more = items.length > 3 ? `<li class="muted">…等共 ${items.length} 件</li>` : '';
+  return `
+    <section class="card next-step">
+      <span class="eyebrow">下一步</span>
+      <h2>${borrow ? `借用清單有 ${items.length} 件還沒送出` : `歸還清單有 ${items.length} 件還沒確認`}</h2>
+      <ul class="mini-list">${shown}${more}</ul>
+      <a class="btn btn-primary btn-lg btn-block" href="${borrow ? '#/borrow' : '#/return'}">${borrow ? '填寫借用資料並送出' : '確認歸還'} →</a>
+    </section>`;
+}
 
 export function home() {
   const s = store.get();
-  const carts = [];
-  if (s.borrow.length) carts.push(`<a class="btn" href="#/borrow">借用清單 ${s.borrow.length} 件 →</a>`);
-  if (s.ret.length) carts.push(`<a class="btn" href="#/return">歸還清單 ${s.ret.length} 件 →</a>`);
+  const pending = [];
+  if (s.borrow.length) pending.push(nextStepHtml('borrow', s.borrow));
+  if (s.ret.length) pending.push(nextStepHtml('return', s.ret));
 
   view.innerHTML = `
+    ${pending.join('')}
     <section class="card">
-      <h1>掃碼借還展品</h1>
+      <h1>${pending.length ? '繼續掃描' : '掃碼借還展品'}</h1>
       <p class="muted">掃描展品上的 QR Code：在庫的展品會放進借用清單，借出中的展品會放進歸還清單。</p>
-      ${scanControlsHtml('auto', '掃描 QR Code')}
+      <button class="btn btn-primary btn-lg btn-block" type="button" data-scan="auto">${ICONS.scan}掃描 QR Code</button>
+      ${manualFormHtml('auto', false)}
     </section>
-    ${carts.length ? `<section class="card"><h2>尚未送出</h2><div class="btn-row">${carts.join('')}</div></section>` : ''}
-    <section class="card">
-      <h2>使用方式</h2>
-      <ol class="steps">
-        <li>用手機相機或上方按鈕掃描展品 QR Code，可以連續掃描多件</li>
-        <li>到「借用」填寫 Email、借用事由與預計歸還日期後送出</li>
-        <li>歸還時逐件掃描展品即可，可以分批歸還</li>
-      </ol>
-    </section>`;
+    ${pending.length ? '' : `
+      <section class="card">
+        <h2>使用方式</h2>
+        <ol class="steps">
+          <li>掃描展品的 QR Code，可以連續掃描多件</li>
+          <li>按「填寫借用資料並送出」，填 Email、借用事由與預計歸還日</li>
+          <li>歸還時逐件掃描展品，按「確認歸還」，可以分批歸還</li>
+        </ol>
+      </section>`}`;
   bindScanControls();
 }
 
 // ---- 借用 ----
 
-// #/borrow 是自己借用；管理者從 #/borrow/proxy 進入（或打開表單上的開關）就是幫同仁代填。
+// #/borrow 是自己借用；管理者從 #/borrow/proxy 進入（或勾選表單上的選項）就是幫同仁代填。
 export async function borrow(arg) {
   const live = current();
   const s = store.get();
@@ -128,21 +215,18 @@ export async function borrow(arg) {
   const proxy = admin && arg === 'proxy';
   const people = proxy ? cfg.borrowers || [] : s.recent;
   const me = proxy ? null : s.me;
+  const n = s.borrow.length;
 
   view.innerHTML = `
     ${proxy ? '<p class="notice">代填模式：掃描要借給同仁的展品，再填寫同仁的資料送出。紀錄會標示由你代填。</p>' : ''}
-    <section class="card">
-      <div class="card-head"><h2>借用清單</h2><span class="tag tag-info">${s.borrow.length} 件</span></div>
-      ${s.borrow.length
-        ? `<ul class="list">${s.borrow.map((i) => `
-            <li><div class="main">${itemLine(i)}</div>
-              <button class="btn btn-sm" type="button" data-remove="${esc(i.item_id)}">移除</button></li>`).join('')}</ul>`
-        : '<p class="empty">還沒有展品，請掃描要借用的展品。</p>'}
-      ${scanControlsHtml('borrow', '掃描更多展品')}
-    </section>
-    ${s.borrow.length ? `
+    ${n ? `
+      <section class="card">
+        <div class="card-head"><h2><span class="step-num">1</span>確認要借的展品</h2><span class="tag tag-info">${n} 件</span></div>
+        ${removableList(s.borrow)}
+        ${listScanControlsHtml('borrow')}
+      </section>
       <form class="card" id="checkout">
-        <h2>借用資訊</h2>
+        <h2><span class="step-num">2</span>填寫借用資訊</h2>
         ${admin ? `
           <label class="switch-row" for="f-proxy">
             <input type="checkbox" id="f-proxy" ${proxy ? 'checked' : ''}>
@@ -150,16 +234,12 @@ export async function borrow(arg) {
           </label>` : ''}
         ${borrowerFieldsHtml({ domain: cfg.emailDomain, people, email: me?.email, name: me?.name })}
         ${reasonFieldsHtml(cfg.reasons)}
-        <button class="btn btn-primary btn-lg btn-block" type="submit">確認借用 ${s.borrow.length} 件</button>
-      </form>` : ''}`;
+        <button class="btn btn-primary btn-lg btn-block" type="submit">確認借用 ${n} 件</button>
+        <p class="small muted form-foot">送出後就完成借用。逾期未歸還時，系統會寄 Email 提醒。</p>
+      </form>` : emptyStateHtml('borrow')}`;
 
   bindScanControls();
-  view.querySelectorAll('[data-remove]').forEach((button) => {
-    button.addEventListener('click', () => {
-      store.update({ borrow: store.get().borrow.filter((i) => i.item_id !== button.dataset.remove) });
-      route();
-    });
-  });
+  bindRemove('borrow');
 
   const form = document.getElementById('checkout');
   if (!form) return;
@@ -210,7 +290,11 @@ function showCheckoutDone(res, proxy) {
       <ul class="list">${res.items.map((i) => `<li><div class="main">${itemLine(i)}</div></li>`).join('')}</ul>
       <p class="small muted">逾期未歸還時，系統會寄 Email 提醒。歸還時掃描展品的 QR Code 即可。</p>
     </section>
-    <a class="btn btn-primary btn-block" href="#/">回首頁</a>`;
+    <div class="btn-col">
+      ${proxy
+        ? '<a class="btn btn-primary btn-lg btn-block" href="#/borrow/proxy">繼續代填其他展品</a><a class="btn btn-block" href="#/admin">回管理頁</a>'
+        : '<a class="btn btn-primary btn-lg btn-block" href="#/">完成</a><a class="btn btn-block" href="#/mine">查看我的借用</a>'}
+    </div>`;
   window.scrollTo(0, 0);
 }
 
@@ -218,25 +302,21 @@ function showCheckoutDone(res, proxy) {
 
 export function giveBack() {
   const s = store.get();
-  view.innerHTML = `
+  const n = s.ret.length;
+  view.innerHTML = n ? `
     <section class="card">
-      <div class="card-head"><h2>歸還清單</h2><span class="tag tag-info">${s.ret.length} 件</span></div>
-      ${s.ret.length
-        ? `<ul class="list">${s.ret.map((i) => `
-            <li><div class="main">${itemLine(i, `<div class="sub">借用者 ${esc(i.borrower)}・預計 ${esc(i.expected)} ${i.overdue ? statusTag('', true) : ''}</div>`)}</div>
-              <button class="btn btn-sm" type="button" data-remove="${esc(i.item_id)}">移除</button></li>`).join('')}</ul>`
-        : '<p class="empty">還沒有展品，請逐件掃描要歸還的展品。</p>'}
-      ${scanControlsHtml('return', '掃描要歸還的展品')}
+      <div class="card-head"><h2><span class="step-num">1</span>確認要歸還的展品</h2><span class="tag tag-info">${n} 件</span></div>
+      ${removableList(s.ret, (i) => `<div class="sub">借用者 ${esc(i.borrower)}・預計 ${esc(i.expected)} ${i.overdue ? statusTag('', true) : ''}</div>`)}
+      ${listScanControlsHtml('return')}
     </section>
-    ${s.ret.length ? `<button class="btn btn-primary btn-lg btn-block" type="button" id="do-return">確認歸還 ${s.ret.length} 件</button>` : ''}`;
+    <section class="card">
+      <h2><span class="step-num">2</span>送出歸還</h2>
+      <p class="small muted">按下後，這 ${n} 件會登記為已歸還。同一張借用單還沒歸還的展品，會繼續記在借用者名下。</p>
+      <button class="btn btn-primary btn-lg btn-block" type="button" id="do-return">確認歸還 ${n} 件</button>
+    </section>` : emptyStateHtml('return');
 
   bindScanControls();
-  view.querySelectorAll('[data-remove]').forEach((button) => {
-    button.addEventListener('click', () => {
-      store.update({ ret: store.get().ret.filter((i) => i.item_id !== button.dataset.remove) });
-      route();
-    });
-  });
+  bindRemove('ret');
   const submit = document.getElementById('do-return');
   if (!submit) return;
   submit.addEventListener('click', () => withBusy(submit, '送出中…', async () => {
@@ -263,7 +343,10 @@ function showReturnDone(res) {
       ${res.loans.map((l) => `<p class="small ${l.remaining ? 'notice notice-warn' : 'muted'}">借用單 ${esc(l.loan_id)}：${
         l.remaining ? `尚有 ${l.remaining} 件未歸還，會繼續記在借用者名下` : '已全部歸還'}</p>`).join('')}
     </section>
-    <a class="btn btn-primary btn-block" href="#/">回首頁</a>`;
+    <div class="btn-col">
+      <a class="btn btn-primary btn-lg btn-block" href="#/">完成</a>
+      <a class="btn btn-block" href="#/return">繼續歸還其他展品</a>
+    </div>`;
   window.scrollTo(0, 0);
 }
 
@@ -280,12 +363,13 @@ export async function mine() {
   view.innerHTML = `
     <form class="card" id="mine-form">
       <h2>我的借用</h2>
+      <p class="small muted">輸入借用時填的 Email，查看還沒歸還的展品與到期日。</p>
       <div class="field">
         <label for="m-email">Email</label>
         ${domain
           ? `<div class="input-group"><input id="m-email" name="email" inputmode="email" autocapitalize="off" required
                value="${esc(stripDomain(s.me?.email || '', domain))}"><span class="addon">@${esc(domain)}</span></div>`
-          : `<input id="m-email" name="email" type="email" required value="${esc(s.me?.email || '')}">`}
+          : `<input id="m-email" name="email" type="email" autocomplete="email" required value="${esc(s.me?.email || '')}">`}
       </div>
       <button class="btn btn-primary btn-block" type="submit">查詢</button>
     </form>
@@ -316,23 +400,37 @@ async function showMyLoans(email) {
     return;
   }
 
+  const overdueCount = rows.filter((r) => r.overdue).length;
+  const earliest = rows.map((r) => r.expected_return_date).filter(Boolean).sort()[0];
   const groups = new Map();
   rows.forEach((r) => {
     if (!groups.has(r.loan_id)) groups.set(r.loan_id, []);
     groups.get(r.loan_id).push(r);
   });
-  box.innerHTML = [...groups.values()].map((items) => {
-    const first = items[0];
-    const overdue = items.some((r) => r.overdue);
-    return `
-      <section class="card">
-        <div class="card-head">
-          <h3>${esc(first.reason)}</h3>
-          ${overdue ? statusTag('', true) : `<span class="tag">${items.length} 件</span>`}
-        </div>
-        <p class="small muted">借用單 ${esc(first.loan_id)}・借出 ${esc(String(first.borrowed_at).slice(0, 10))}・預計歸還 ${esc(first.expected_return_date)}</p>
-        <ul class="list">${items.map((r) => `
-          <li><div class="main">${itemLine({ item_id: r.item_id, name: r.item_name })}</div></li>`).join('')}</ul>
-      </section>`;
-  }).join('') + '<p class="small muted">歸還時請到「歸還」逐件掃描展品的 QR Code。</p>';
+
+  box.innerHTML = `
+    <section class="card summary ${overdueCount ? 'summary-warn' : ''}">
+      <div><b>借用中 ${rows.length} 件</b>${overdueCount ? `，其中 <b>${overdueCount} 件已逾期</b>` : ''}</div>
+      <div class="small muted">最早到期：${esc(earliest || '—')}</div>
+    </section>
+    ${[...groups.values()].map((items) => {
+      const first = items[0];
+      const overdue = items.some((r) => r.overdue);
+      return `
+        <section class="card">
+          <div class="card-head">
+            <h3>${esc(first.reason)}</h3>
+            ${overdue ? statusTag('', true) : `<span class="tag">${items.length} 件</span>`}
+          </div>
+          <p class="small muted">借用單 ${esc(first.loan_id)}・借出 ${esc(String(first.borrowed_at).slice(0, 10))}・預計歸還 ${esc(first.expected_return_date)}</p>
+          <ul class="list">${items.map((r) => `
+            <li><div class="main">${itemLine({ item_id: r.item_id, name: r.item_name })}</div></li>`).join('')}</ul>
+        </section>`;
+    }).join('')}
+    <section class="card">
+      <h2>要歸還了嗎？</h2>
+      <p class="small muted">歸還時要逐件掃描實體展品，可以只還其中幾件。</p>
+      <button class="btn btn-primary btn-block" type="button" data-scan="return">${ICONS.scan}掃描要歸還的展品</button>
+    </section>`;
+  bindScanControls(box);
 }

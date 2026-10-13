@@ -18,12 +18,29 @@
 
   <main id="view" class="container" tabindex="-1"></main>
 
+  <div id="cartbar" class="cartbar" hidden></div>
+
   <nav class="tabbar" aria-label="主要功能">
-    <a href="#/" data-tab="">首頁</a>
-    <a href="#/borrow" data-tab="borrow">借用<span class="badge" data-count="borrow" hidden></span></a>
-    <a href="#/return" data-tab="return">歸還<span class="badge" data-count="ret" hidden></span></a>
-    <a href="#/mine" data-tab="mine">我的借用</a>
-    <a href="#/admin" data-tab="admin">管理</a>
+    <a href="#/" data-tab="">
+      <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></span>
+      <span>首頁</span>
+    </a>
+    <a href="#/borrow" data-tab="borrow">
+      <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg><span class="badge" data-count="borrow" hidden></span></span>
+      <span>借用</span>
+    </a>
+    <a href="#/return" data-tab="return">
+      <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg><span class="badge" data-count="ret" hidden></span></span>
+      <span>歸還</span>
+    </a>
+    <a href="#/mine" data-tab="mine">
+      <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span>
+      <span>我的借用</span>
+    </a>
+    <a href="#/admin" data-tab="admin">
+      <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg></span>
+      <span>管理</span>
+    </a>
   </nav>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
